@@ -2,11 +2,27 @@
 session_start();
 include_once "vendor/autoload.php";
 
+use App\Modele\Modele_Salarie;
 use App\Utilitaire\Singleton_Logger;
 use App\Utilitaire\Vue;
-use App\Vue\Vue_AfficherMessage;
-use App\Vue\Vue_Structure_Entete;
 use function App\Fonctions\CSRF_Renouveler;
+use \App\Modele\Modele_Utilisateur;
+
+// RGPD
+if (isset($_POST['RGPD']) && $_POST['RGPD'] == 'true' && isset($_POST['AccepterRGPD']) && $_POST['AccepterRGPD'] == 'true') {
+    $accepter = null;
+    if(isset($_SESSION["idSalarie"])){
+        $accepter = Modele_Salarie::Salarie_AccepterRGPD($_SESSION["idSalarie"]);
+    }
+    if(isset($_SESSION["idUtilisateur"])){
+        $accepter = Modele_Utilisateur::Utilisateur_AccepterRGPD($_SESSION["idUtilisateur"]);
+    }
+    if ($accepter) $action = "AccepterRGPD";
+} elseif (isset($_POST['RGPD']) && $_POST['RGPD'] == 'true' && isset($_POST['RefuserRGPD']) && $_POST['RefuserRGPD'] == 'true') {
+    $action = "RefuserRGPD";
+    session_destroy();
+    unset($_SESSION);
+}
 
 
 //Page appelée pour les utilisateurs publics

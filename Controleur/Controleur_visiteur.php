@@ -143,8 +143,6 @@ switch ($action) {
                                 include "./Controleur/Controleur_RGPD.php";
                             else
                                 include "./Controleur/Controleur_Catalogue_client.php";
-                            //else
-                            //
 
 
                         } else {//mot de passe pas bon
