@@ -1,6 +1,7 @@
 <?php
 
 use App\Modele\Modele_Entreprise;
+use App\Modele\Modele_Jeton;
 use App\Modele\Modele_Salarie;
 use App\Vue\Vue_Connexion_Formulaire_client;
 use App\Vue\Vue_Mail_Confirme;
@@ -23,7 +24,7 @@ switch ($action) {
             // le mail appartient à une entreprise
             // on va faire le mail pour cette entreprise !
             $nvMdp = "secret";
-            Modele_Entreprise::Entreprise_Modifier_motDePasse($idEntreprise, $nvMdp);
+            Modele_Entreprise::Entreprise_Modifier_motDePasse($entreprise['idEntreprise'], $nvMdp);
 
             $mail = new PHPMailer;
             $mail->isSMTP();
@@ -59,7 +60,7 @@ switch ($action) {
 
             if ($salarie != null) {
                 $nvMdp = "secret";
-                Modele_Salarie::Salarie_Modifier_motDePasse($salarie["idSalarie"], $nvMdp);
+                Modele_Salarie::Salarie_Modifier_motDePasse($salarie['idSalarie'], $nvMdp);
 
                 $mail = new PHPMailer;
                 $mail->isSMTP();
@@ -88,6 +89,86 @@ switch ($action) {
 
         $Vue->addToCorps(new Vue_Mail_Confirme());
 
+        break;
+    case "reinitmdptoken":
+
+        //On regarde si le mail appartient à une entreprise
+        $entreprise = Modele_Entreprise::Entreprise_Select_ParMail($_REQUEST["email"]);
+
+        if ($entreprise != null) {
+            // le mail appartient à une entreprise
+            // on va faire le mail pour cette entreprise !
+            $nvMdp = "secret";
+            Modele_Entreprise::Entreprise_Modifier_motDePasse($entreprise['idEntreprise'], $nvMdp);
+
+            $mail = new PHPMailer;
+            $mail->isSMTP();
+            $mail->Host = '127.0.0.1';
+            $mail->CharSet = "UTF-8";
+            $mail->Port = 1025; //Port non crypté
+            $mail->SMTPAuth = false; //Pas d’authentification
+            $mail->SMTPAutoTLS = false; //Pas de certificat TLS
+            $mail->setFrom('contact@labruleriecomtoise.fr', 'contact');
+            $mail->addAddress($entreprise["mailContact"], $entreprise["denomination"]);
+            if ($mail->addReplyTo('test@labruleriecomtoise.fr', 'admin')) {
+                $octetsAleatoires = openssl_random_pseudo_bytes (256) ;
+                $valeur = sodium_bin2base64($octetsAleatoires, SODIUM_BASE64_VARIANT_ORIGINAL);
+                $idJeton = Modele_Jeton::Jeton_Creation($valeur, $entreprise['idEntreprise'], 1);
+
+                $mail->Subject = 'Objet : MDP !';
+                $mail->isHTML(true);
+                $mail->Body = "Changer votre mot de passe : <a href=\"http://localhost:8001/index.php?action=token&token=$valeur\">Lien à cliquer</a>";
+
+                if (!$mail->send()) {
+                    $msg = 'Désolé, quelque chose a mal tourné. Veuillez réessayer plus tard.';
+
+
+                } else {
+                    $msg = 'Message envoyé ! Merci de nous avoir contactés.';
+
+                }
+            } else {
+                $msg = 'Il doit manquer qqc !';
+
+
+            }
+        } else {
+            //On regarde si le mail appartient à un salarie
+            $salarie = Modele_Salarie::Salarie_Select_byMail($_REQUEST["email"]);
+
+            if ($salarie != null) {
+                $nvMdp = "secret";
+                Modele_Salarie::Salarie_Modifier_motDePasse($salarie["idSalarie"], $nvMdp);
+
+                $mail = new PHPMailer;
+                $mail->isSMTP();
+                $mail->Host = '127.0.0.1';
+                $mail->CharSet = "UTF-8";
+                $mail->Port = 1025; //Port non crypté
+                $mail->SMTPAuth = false; //Pas d’authentification
+                $mail->SMTPAutoTLS = false; //Pas de certificat TLS
+                $mail->setFrom('contact@labruleriecomtoise.fr', 'contact');
+                $mail->addAddress($salarie["mail"], $salarie["nom"] . " " . $salarie["prenom"]);
+                if ($mail->addReplyTo('contact@labruleriecomtoise.fr', 'contact')) {
+                    $octetsAleatoires = openssl_random_pseudo_bytes (256) ;
+                    $valeur = sodium_bin2base64($octetsAleatoires, SODIUM_BASE64_VARIANT_ORIGINAL);
+                    $idJeton = Modele_Jeton::Jeton_Creation($valeur, $salarie['idSalarie'], 1);
+
+                    $mail->Subject = 'Objet : MDP !';
+                    $mail->isHTML(true);
+                    $mail->Body = "Changer votre mot de passe : <a href=\"http://localhost:8001/index.php?action=token&token=$valeur\">Lien à cliquer</a>";
+
+                    if (!$mail->send()) {
+                        $msg = 'Désolé, quelque chose a mal tourné. Veuillez réessayer plus tard.';
+                    } else {
+                        $msg = 'Message envoyé ! Merci de nous avoir contactés.';
+                    }
+                } else {
+                    $msg = 'Il doit manquer qqc !';
+                }
+            }
+        }
+        $Vue->addToCorps(new Vue_Mail_Confirme());
         break;
     case "reinitmdp":
 
